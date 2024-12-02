@@ -139,21 +139,23 @@ function install_tool() {
 
 # 获取服务端信息
 function input_upm() {
-    echo -e "${Tip} 请输入服务端的信息, 格式为 \"protocol://username:password@master:port\" (如输入错误 可以重新运行写入配置)  示例：\"http://h1:p1@127.0.0.1:8080\""
-    read -re UPM
+    echo -e "${Tip} 请输入网站的信息, 格式为 \"protocol://site/report -g group -p pass --alias alias -w window\""
+    read -re INPUT
 }
 
+# 解析用户输入的配置
 function get_conf() {
-    PROTOCOL=$(echo "${UPM}" |sed "s/\///g" |awk -F "[:@]" '{print $1}')
-    USER=$(echo "${UPM}" |sed "s/\///g" |awk -F "[:@]" '{print $2}')
-    PASSWD=$(echo "${UPM}" |sed "s/\///g" |awk -F "[:@]" '{print $3}')
-    if [ "${PROTOCOL}" = "grpc" ]; then
-        echo -e "${Info} 使用 grpc 连接"
-        MASTER=$(echo "${UPM}" |awk -F "[@]" '{print $2}')
-    else
-        echo -e "${Info} 使用 http 连接"
-        MASTER=$(echo "${UPM}" |awk -F "[@]" '{print $2}')/report
-    fi
+    # 从用户输入中提取各个参数
+    SITE=$(echo "${INPUT}" | awk '{print $1}')
+    GROUP=$(echo "${INPUT}" | grep -oP '(?<=-g )[^ ]+')
+    PASS=$(echo "${INPUT}" | grep -oP '(?<=-p )[^ ]+')
+    ALIAS=$(echo "${INPUT}" | grep -oP '(?<=--alias ")[^"]+')
+    WINDOW=$(echo "${INPUT}" | grep -oP '(?<=-w )[^ ]+')
+
+    echo -e "${Info} 使用格式化连接"
+
+    # 构建 ExecStart 命令
+    ASSIGNED_VALUE="ExecStart=/opt/ServerStatus/./stat_client -a ${SITE} -g ${GROUP} -p ${PASS} --alias \"${ALIAS}\" -w ${WINDOW}"
 }
 
 # 检查服务
@@ -224,13 +226,17 @@ EOF
 }
 
 function write_client() {
-    local $latest_version
+    # 获取最新版本号（如果有该功能的话）
+    local latest_version
     latest_version=$(get_latest_version)
+    
     echo -e "${Info} 写入systemd配置中"
-    cat >${client_conf} <<-EOF
+    
+    # 使用 `cat` 写入配置文件
+    cat > ${client_conf} <<-EOF
 #Version=${latest_version}
 [Unit]
-Description=Serverstat-Rust Client
+Description=ServerStatus-Rust Client
 After=network.target
 
 [Service]
@@ -238,8 +244,8 @@ User=root
 Group=root
 Environment="RUST_BACKTRACE=1"
 WorkingDirectory=${working_dir}
-ExecStart=${client_file//\/stat_client/\/./stat_client} -a "${PROTOCOL}://${MASTER}" -u ${USER} -p ${PASSWD}
-ExecReload=/bin/kill -HUP $MAINPID
+${ASSIGNED_VALUE}
+ExecReload=/bin/kill -HUP \$MAINPID
 Restart=on-failure
 
 [Install]
@@ -328,7 +334,7 @@ function restart_client() {
 # 获取二进制文件，现在可以选择下载server或者client，并添加文件下载校验
 function get_status() {
     if [ "${CN}" = true ]; then
-        MIRROR="https://ghp.ci/"
+        MIRROR="https://gh-proxy.com/"
     fi
     install_tool
     rm -f *-unknown-*.zip stat_*
