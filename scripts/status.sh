@@ -155,7 +155,7 @@ function get_conf() {
     echo -e "${Info} 使用格式化连接"
 
     # 构建 ExecStart 命令
-    ASSIGNED_VALUE="ExecStart=/opt/ServerStatus/./stat_client -a ${SITE} -g ${GROUP} -p ${PASS} --alias \"${ALIAS}\" -w ${WINDOW}"
+    ASSIGNED_VALUE="ExecStart=/opt/ServerStatus/client./stat_client -a ${SITE} -g ${GROUP} -p ${PASS} --alias \"${ALIAS}\" -w ${WINDOW}"
 }
 
 # 检查服务
