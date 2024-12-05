@@ -334,7 +334,7 @@ function restart_client() {
 # 获取二进制文件，现在可以选择下载server或者client，并添加文件下载校验
 function get_status() {
     if [ "${CN}" = true ]; then
-        MIRROR="https://gh-proxy.com/"
+        MIRROR="https://ghp.ci/"
     fi
     install_tool
     rm -f *-unknown-*.zip stat_*
